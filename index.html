@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Elevating Flow-Guided Video Inpainting with Reference Generation</title>
+<meta name="description" content="RGVI is a flow-guided video inpainting framework that propagates known pixels with one-shot pixel pulling and generates missing content with a large generative model in a single key frame. AAAI 2025.">
+<meta property="og:title" content="RGVI: Elevating Flow-Guided Video Inpainting with Reference Generation (AAAI 2025)">
+<meta property="og:description" content="Flow-guided video inpainting with one-shot pixel pulling and reference generation, plus the HQVI benchmark.">
+<meta property="og:type" content="website">
+<link rel="icon" href="data:,">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@100..125,500..800&family=Source+Sans+3:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --bg:#ffffff; --panel:#f2f5f3; --ink:#15191b; --muted:#5a6560; --rule:#dce2de;
+  --accent:#23764a; --ours:#34c759; --ours-tint:rgba(52,199,89,.14);
+  --media:#0c0e0f; --focus:#23764a;
+  --display:"Archivo","Helvetica Neue",Arial,sans-serif;
+  --body:"Source Sans 3","Helvetica Neue",Arial,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  --wide:960px; --text:768px;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0f1312; --panel:#161c19; --ink:#e6ecea; --muted:#98a39e; --rule:#28312d;
+    --accent:#6fd49a; --ours-tint:rgba(52,199,89,.16); --media:#000; --focus:#6fd49a;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0f1312; --panel:#161c19; --ink:#e6ecea; --muted:#98a39e; --rule:#28312d;
+  --accent:#6fd49a; --ours-tint:rgba(52,199,89,.16); --media:#000; --focus:#6fd49a;
+  color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 17px/1.6 var(--body);
+  padding-inline:max(16px, env(safe-area-inset-left, 0px));padding-block:0 48px}
+img,video{display:block;max-width:100%;height:auto}
+a{color:var(--accent);text-underline-offset:2px}
+a:focus-visible,button:focus-visible{outline:2px solid var(--focus);outline-offset:2px;border-radius:4px}
+.wrap{max-width:var(--wide);margin-inline:auto}
+.prose{max-width:var(--text);margin-inline:auto}
+.nw{white-space:nowrap}
+sup{font-size:.72em;line-height:0;position:relative;top:-.45em;vertical-align:baseline;margin-left:1px}
+
+/* ---------- header ---------- */
+header{padding-block:56px 20px;text-align:center}
+h1{font-family:var(--display);font-stretch:112%;font-weight:760;letter-spacing:-.01em;
+  font-size:clamp(24px,3.2vw,36px);line-height:1.18;margin:0 auto;text-wrap:balance}
+.authors{margin:20px auto 0;font-size:18px;display:flex;flex-wrap:wrap;justify-content:center;align-items:baseline;gap:4px 22px}
+.authors a{color:inherit;text-decoration:none;border-bottom:1px solid var(--rule)}
+.authors a:hover{color:var(--accent);border-bottom-color:currentColor}
+.affil{margin:6px 0 0;color:var(--muted);font-size:16px;display:flex;flex-wrap:wrap;justify-content:center;gap:2px 18px}
+.note{margin:2px 0 0;color:var(--muted);font-size:14px}
+.venue{margin:14px 0 0;font:700 16px/1 var(--display);font-stretch:108%;letter-spacing:.03em;color:var(--accent)}
+.links{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;margin:20px 0 0;padding:0;list-style:none}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:9px 18px;border-radius:999px;background:var(--ink);color:var(--bg);
+  font:600 15px/1 var(--body);text-decoration:none;border:1px solid var(--ink)}
+.btn svg{width:17px;height:17px;flex:none}
+.btn .ax{font:700 13px/1 var(--body);letter-spacing:.02em}
+
+/* ---------- hero ---------- */
+.hero{margin-top:34px}
+.tldr{max-width:var(--text);margin:0 auto 22px;text-align:center;font-size:19px;text-wrap:balance}
+.tldr b{font-family:var(--display);font-stretch:112%;font-weight:760;letter-spacing:.02em;margin-right:6px}
+.demo{background:#fff;border:1px solid var(--rule);border-radius:10px;overflow:hidden}
+.demo video{width:100%}
+.cap{color:var(--muted);font-size:15px;margin:12px auto 0;max-width:var(--text);text-align:center;text-wrap:balance}
+
+/* ---------- sections ---------- */
+section{margin-top:72px}
+h2{font-family:var(--display);font-stretch:112%;font-weight:720;font-size:28px;line-height:1.2;margin:0 0 18px;text-wrap:balance}
+h3{font-family:var(--display);font-stretch:106%;font-weight:680;font-size:19px;margin:40px 0 10px}
+p{margin:0 0 14px}
+.eyebrow{font:700 12px/1 var(--body);letter-spacing:.12em;text-transform:uppercase;color:var(--accent);margin:0 0 10px}
+section h2,section h3,.eyebrow{text-align:center}
+#abstract p,.prose > p:not(.eyebrow),.intro{text-align:justify;hyphens:manual}
+.intro{max-width:var(--text);margin:0 auto 18px}
+figure{margin:22px 0 0}
+figure a.zoom{display:block;background:#fff;border-radius:10px;border:1px solid var(--rule);padding:10px}
+figcaption{color:var(--muted);font-size:15px;max-width:var(--text);margin:10px auto 0;text-align:center}
+figure.narrow{max-width:var(--text);margin-inline:auto}
+.col1{max-width:calc(var(--wide) * .47 * var(--f,1));margin-inline:auto}
+.steps{list-style:none;padding:0;margin:26px 0 0;display:grid;grid-template-columns:repeat(2,1fr);gap:18px}
+.steps li{background:var(--panel);border-radius:10px;padding:18px 18px 16px}
+.steps h3{text-align:left;font-family:var(--display);font-stretch:106%;font-size:17px;margin:0 0 6px}
+.steps p{font-size:16px;margin:0}
+.steps .tag{font:500 12px/1 var(--mono);color:var(--muted);display:block;margin-bottom:8px}
+.cta{display:flex;justify-content:center;margin-top:18px}
+.grid-head,.vrow{display:grid;gap:8px;align-items:end}
+.c3{grid-template-columns:repeat(3,1fr)}
+.c2{grid-template-columns:repeat(2,1fr)}
+.grid-head{font:600 14px/1.25 var(--body);color:var(--muted);margin:22px 0 6px}
+.grid-head span{text-align:center;padding-bottom:6px;border-bottom:3px solid transparent}
+.grid-head .ours{color:var(--ink);border-bottom-color:var(--ours)}
+.rowcap{font-size:14px;color:var(--muted);margin:16px 0 6px}
+.cell{margin:0}
+.cell video{width:100%;height:auto;background:var(--media);border-radius:6px}
+.cell figcaption{display:none;font-size:13px;margin-top:4px;max-width:none}
+.controls{display:flex;justify-content:center;margin:22px 0 0}
+.seg{display:inline-flex;border:1px solid var(--rule);border-radius:999px;overflow:hidden}
+.seg button{font:600 14px/1 var(--body);padding:8px 16px;border:0;background:transparent;color:var(--ink);cursor:pointer}
+.seg button[aria-selected="true"]{background:var(--ink);color:var(--bg)}
+.panel[hidden]{display:none}
+
+/* ---------- tables ---------- */
+.tbl-wrap{overflow-x:auto;margin-top:12px;border:1px solid var(--rule);border-radius:10px}
+.tbl-wrap.narrow{max-width:var(--text);margin-inline:auto}
+table{border-collapse:collapse;width:100%;min-width:760px;font-size:15px;font-variant-numeric:tabular-nums}
+.tbl-wrap.narrow table{min-width:520px}
+th,td{padding:8px 10px;text-align:center;white-space:nowrap}
+th{font-weight:600;color:var(--muted);border-bottom:1px solid var(--rule)}
+thead tr:first-child th{color:var(--ink)}
+td:first-child,th:first-child{text-align:left}
+tbody tr+tr td{border-top:1px solid var(--rule)}
+tr.group td{background:var(--panel);font-weight:600;font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);text-align:left}
+tr.ours td{background:var(--ours-tint)}
+td b{font-weight:700}
+.tnote{font-size:14px;color:var(--muted);max-width:var(--text);margin:8px auto 0;text-align:center}
+
+/* ---------- bibtex ---------- */
+.bib{position:relative;background:var(--panel);border-radius:10px;margin-top:6px}
+.bib pre{margin:0;padding:18px 20px;overflow-x:auto;font:400 14px/1.6 var(--mono);color:var(--ink)}
+.copy{position:absolute;top:10px;right:10px;font:600 13px/1 var(--body);padding:7px 12px;border-radius:999px;border:1px solid var(--rule);background:var(--bg);color:var(--ink);cursor:pointer}
+
+footer{margin-top:72px;padding-top:18px;border-top:1px solid var(--rule);color:var(--muted);font-size:14px;text-align:center}
+
+/* ---------- responsive ---------- */
+@media (max-width:760px){ .steps{grid-template-columns:1fr} }
+@media (max-width:640px){
+  body{font-size:16px}
+  header{padding-block:36px 10px}
+  .br-lg{display:none}
+  .tldr{font-size:17px}
+  .grid-head{display:none}
+  .c3{grid-template-columns:1fr}
+  .cell figcaption{display:block}
+}
+@media (prefers-reduced-motion: reduce){ *{scroll-behavior:auto!important;transition:none!important} }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>Elevating <span class="nw">Flow-Guided</span> Video Inpainting<br class="br-lg"> with Reference Generation</h1>
+  <div class="authors">
+    <span><a href="https://suhwan-cho.github.io/" target="_blank" rel="noopener">Suhwan Cho</a><sup>1,*</sup></span>
+    <span><a href="https://sites.google.com/view/seoungwugoh/" target="_blank" rel="noopener">Seoung Wug Oh</a><sup>2</sup></span>
+    <span>Sangyoun Lee<sup>1</sup></span>
+    <span><a href="https://joonyoung-cv.github.io/" target="_blank" rel="noopener">Joon-Young Lee</a><sup>2</sup></span>
+  </div>
+  <p class="affil"><span><sup>1</sup>Yonsei University</span><span><sup>2</sup>Adobe Research</span></p>
+  <p class="note"><sup>*</sup>Work done during an internship at Adobe Research</p>
+  <p class="venue">AAAI 2025</p>
+  <ul class="links">
+    <li><a class="btn" href="https://ojs.aaai.org/index.php/AAAI/article/download/32255/34410" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></svg>Paper</a></li>
+    <li><a class="btn" href="https://arxiv.org/abs/2412.08975" target="_blank" rel="noopener"><span class="ax" aria-hidden="true">χ</span>arXiv</a></li>
+    <li><a class="btn" href="https://github.com/suhwan-cho/RGVI" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .5a11.5 11.5 0 0 0-3.64 22.41c.58.1.79-.25.79-.56v-2c-3.2.7-3.88-1.37-3.88-1.37-.52-1.33-1.28-1.69-1.28-1.69-1.05-.72.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.77 2.7 1.26 3.36.96.1-.75.4-1.26.73-1.55-2.55-.29-5.24-1.28-5.24-5.69 0-1.26.45-2.29 1.19-3.1-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.17 1.18a11 11 0 0 1 5.77 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.81 1.19 1.84 1.19 3.1 0 4.42-2.7 5.39-5.26 5.68.41.36.78 1.06.78 2.14v3.17c0 .31.21.67.8.56A11.5 11.5 0 0 0 12 .5z"/></svg>Code</a></li>
+    <li><a class="btn" href="https://drive.google.com/file/d/1eiscxJO2o8qVlHX52sul2Pz8elOwSWUP/view?usp=drive_link" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.66 3.58 3 8 3s8-1.34 8-3V5"/><path d="M4 12c0 1.66 3.58 3 8 3s8-1.34 8-3"/></svg>HQVI Dataset</a></li>
+  </ul>
+</header>
+
+<div class="hero">
+  <p class="tldr"><b>TL;DR</b>RGVI propagates known pixels across a video with one-shot pixel pulling and generates the rest in a single key frame with a large generative model, then spreads that reference to every frame.</p>
+  <div class="demo">
+    <video src="static/video/demo.mp4" poster="static/img/demo_poster.jpg" muted loop playsinline autoplay controls preload="metadata" aria-label="Video object removal on DAVIS 2016 comparing FuseFormer, ProPainter, and RGVI"></video>
+  </div>
+  <p class="cap">Video object removal on DAVIS 2016. Each clip shows the input with its mask, FuseFormer, ProPainter, and RGVI.</p>
+</div>
+
+<section id="abstract" class="prose">
+  <h2>Abstract</h2>
+  <p>Video inpainting (VI) is a challenging task that requires effective propagation of observable content across frames while simultaneously generating new content not present in the original video. In this study, we propose a robust and practical VI framework that leverages a large generative model for reference generation in combination with an advanced pixel propagation algorithm. Powered by a strong generative model, our method not only significantly enhances frame-level quality for object removal but also synthesizes new content in the missing areas based on user-provided text prompts. For pixel propagation, we introduce a one-shot pixel pulling method that effectively avoids error accumulation from repeated sampling while maintaining sub-pixel precision. To evaluate various VI methods in realistic scenarios, we also propose a high-quality VI benchmark, HQVI, comprising carefully generated videos using alpha matte composition. On public benchmarks and the HQVI dataset, our method demonstrates significantly higher visual quality and metric scores compared to existing solutions. Furthermore, it can process high-resolution videos exceeding 2K resolution with ease, underscoring its superiority for real-world applications.</p>
+</section>
+
+<section id="method">
+  <div class="prose">
+    <p class="eyebrow">Method</p>
+    <h2>How RGVI works</h2>
+    <p>Coupled approaches train one network to both propagate and generate, which leaves an ambiguity between the two. RGVI decouples them. Content that is visible somewhere in the video is propagated with optical flow, and content that appears nowhere in the video comes from a large generative model.</p>
+  </div>
+  <figure>
+    <a class="zoom" href="static/img/framework.png" target="_blank" rel="noopener"><img src="static/img/framework.png" alt="RGVI pipeline: flow completion, internal propagation, reference generation, reference propagation, and per-frame completion" loading="lazy" width="1994" height="619"></a>
+    <figcaption>Overall pipeline of RGVI.</figcaption>
+  </figure>
+  <ol class="steps">
+    <li><span class="tag">step 1</span><h3>Internal pixel propagation</h3><p>Known pixels are propagated across all frames with completed optical flows. Colors are pulled from the source frames in both directions, and pixels on which the two directions disagree are marked as unreliable.</p></li>
+    <li><span class="tag">step 2</span><h3>Reference generation</h3><p>A key frame is chosen by how many unknown pixels it connects to in other frames. Stable Diffusion fills its missing area, either as plausible background or as new content from a text prompt.</p></li>
+    <li><span class="tag">step 3</span><h3>Reference propagation</h3><p>The generated pixels in the key frame are propagated to the rest of the frames with the pre-computed flows.</p></li>
+    <li><span class="tag">step 4</span><h3>Per-frame completion</h3><p>A lightweight encoder-decoder network fills the areas that are still missing, including the pixels marked as unreliable.</p></li>
+  </ol>
+
+  <h3>One-shot pixel pulling</h3>
+  <p class="intro">Recurrent pixel warping re-samples colors at every step, so details fade over long propagation. RGVI warps the optical flows instead and pulls each color from its source frame only once, which keeps sub-pixel accuracy without re-sampling artifacts.</p>
+  <figure class="col1">
+    <a class="zoom" href="static/img/prop.jpg" target="_blank" rel="noopener"><img src="static/img/prop.jpg" alt="Target frame, recurrent pixel warping result, and one-shot pixel pulling result with enlarged crops" loading="lazy" width="1979" height="823"></a>
+    <figcaption>Visual comparison between recurrent pixel warping and one-shot pixel pulling, where the source frame image is propagated to the target frame.</figcaption>
+  </figure>
+  <div class="tbl-wrap narrow">
+    <table>
+      <thead><tr><th>Internal propagation</th><th>Reference propagation</th><th>PSNR ↑</th><th>SSIM ↑</th><th>LPIPS ↓</th><th>VFID ↓</th></tr></thead>
+      <tbody>
+        <tr><td>None</td><td>None</td><td>27.64</td><td>0.9234</td><td>0.0962</td><td>0.5916</td></tr>
+        <tr><td>Recurrent warping</td><td>None</td><td>31.43</td><td>0.9512</td><td>0.0595</td><td>0.2405</td></tr>
+        <tr><td>One-shot pulling</td><td>None</td><td>31.60</td><td>0.9559</td><td>0.0390</td><td>0.1868</td></tr>
+        <tr><td>Recurrent warping</td><td>Recurrent warping</td><td>30.17</td><td>0.9478</td><td>0.0558</td><td>0.2153</td></tr>
+        <tr class="ours"><td>One-shot pulling</td><td>One-shot pulling</td><td>30.66</td><td>0.9527</td><td>0.0335</td><td>0.1825</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="tnote">Pixel propagation strategies on HQVI at 240p.</p>
+
+  <h3>Generation mode</h3>
+  <p class="intro">In the default removal mode, the text prompt is “Empty background, high resolution”, so the model fills the missing area with content that blends into the scene. In the generation mode, a user prompt decides what appears in the missing area.</p>
+  <figure class="col1">
+    <a class="zoom" href="static/img/generation.jpg" target="_blank" rel="noopener"><img src="static/img/generation.jpg" alt="Input frames with the bear masked, and outputs generated with the prompts Standing Minions and Sleeping cat" loading="lazy" width="1973" height="1338"></a>
+    <figcaption>RGVI outputs from the generation mode.</figcaption>
+  </figure>
+</section>
+
+<section id="hqvi">
+  <div class="prose">
+    <p class="eyebrow">Benchmark</p>
+    <h2>HQVI dataset</h2>
+    <p>HQVI blends foreground objects from VideoMatte240K into real-world videos from Pexels with alpha mattes, so every video comes with a ground truth for object removal. It includes scenarios that need generation for large missing areas, and targets occluded by distracting objects, annotated with a negative mask for the object to remove and a positive mask for the object to keep. Each video is 1200×2160.</p>
+  </div>
+  <div class="grid-head c3" aria-hidden="true"><span>Input with masks</span><span class="ours">RGVI</span><span>Ground truth</span></div>
+  <p class="rowcap">Skydivers over a city</p>
+  <div class="vrow c3" data-sync>
+      <figure class="cell"><video src="static/video/hqvi_city_input.mp4" muted loop playsinline preload="none" aria-label="Input with masks"></video><figcaption>Input with masks</figcaption></figure>
+      <figure class="cell"><video src="static/video/hqvi_city_rgvi.mp4" muted loop playsinline preload="none" aria-label="RGVI"></video><figcaption>RGVI</figcaption></figure>
+      <figure class="cell"><video src="static/video/hqvi_city_gt.mp4" muted loop playsinline preload="none" aria-label="Ground truth"></video><figcaption>Ground truth</figcaption></figure>
+  </div>
+  <p class="rowcap">Workers in front of a graffiti wall</p>
+  <div class="vrow c3" data-sync>
+      <figure class="cell"><video src="static/video/hqvi_paint_input.mp4" muted loop playsinline preload="none" aria-label="Input with masks"></video><figcaption>Input with masks</figcaption></figure>
+      <figure class="cell"><video src="static/video/hqvi_paint_rgvi.mp4" muted loop playsinline preload="none" aria-label="RGVI"></video><figcaption>RGVI</figcaption></figure>
+      <figure class="cell"><video src="static/video/hqvi_paint_gt.mp4" muted loop playsinline preload="none" aria-label="Ground truth"></video><figcaption>Ground truth</figcaption></figure>
+  </div>
+  <p class="tnote">Example videos from the HQVI dataset at 480p. Negative masks, the objects to remove, are highlighted in green, while positive masks, the occluding objects to keep, are highlighted in red.</p>
+  <div class="cta"><a class="btn" href="https://drive.google.com/file/d/1eiscxJO2o8qVlHX52sul2Pz8elOwSWUP/view?usp=drive_link" target="_blank" rel="noopener">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>
+    Download HQVI</a></div>
+</section>
+
+<section id="results">
+  <p class="eyebrow">Results</p>
+  <h2>Video object removal on HQVI</h2>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Method</th><th>Publication</th><th>PSNR ↑</th><th>SSIM ↑</th><th>LPIPS ↓</th><th>VFID ↓</th><th>Mem.</th><th>Time</th></tr></thead>
+      <tbody>
+        <tr class="group"><td colspan="8">240×432 input</td></tr>
+        <tr><td>STTN<sup>†</sup></td><td>ECCV'20</td><td>29.64</td><td>0.9339</td><td>0.0528</td><td>0.2594</td><td>5.2G</td><td>9s</td></tr>
+        <tr><td>FGVC</td><td>ECCV'20</td><td>28.37</td><td>0.9383</td><td>0.0409</td><td>0.2436</td><td>1.3G</td><td>2m 56s</td></tr>
+        <tr><td>FuseFormer<sup>†</sup></td><td>ICCV'21</td><td>29.92</td><td>0.9365</td><td>0.0498</td><td>0.2727</td><td>21.5G</td><td>17s</td></tr>
+        <tr><td>E<sup>2</sup>FGVI<sup>†</sup></td><td>CVPR'22</td><td>30.63</td><td>0.9427</td><td>0.0401</td><td>0.1885</td><td>7.2G</td><td>12s</td></tr>
+        <tr><td>ProPainter</td><td>ICCV'23</td><td>30.62</td><td>0.9413</td><td>0.0388</td><td>0.2128</td><td>8.1G</td><td>15s</td></tr>
+        <tr class="ours"><td><b>RGVI</b> w/o Ref.</td><td></td><td><b>31.60</b></td><td><b>0.9559</b></td><td>0.0390</td><td>0.1868</td><td>8.3G</td><td>55s</td></tr>
+        <tr class="ours"><td><b>RGVI</b></td><td></td><td>30.66</td><td>0.9527</td><td><b>0.0335</b></td><td><b>0.1825</b></td><td>8.3G</td><td>58s</td></tr>
+        <tr class="group"><td colspan="8">480×864 input</td></tr>
+        <tr><td>FGVC</td><td>ECCV'20</td><td>28.63</td><td>0.9433</td><td>0.0388</td><td>0.0470</td><td>2.4G</td><td>15m 7s</td></tr>
+        <tr><td>ProPainter</td><td>ICCV'23</td><td>30.69</td><td>0.9414</td><td>0.0457</td><td>0.0478</td><td>23.7G</td><td>1m 12s</td></tr>
+        <tr class="ours"><td><b>RGVI</b> w/o Ref.</td><td></td><td><b>31.19</b></td><td><b>0.9534</b></td><td>0.0403</td><td>0.0404</td><td>8.3G</td><td>1m 38s</td></tr>
+        <tr class="ours"><td><b>RGVI</b></td><td></td><td>30.90</td><td>0.9513</td><td><b>0.0342</b></td><td><b>0.0311</b></td><td>8.3G</td><td>1m 41s</td></tr>
+        <tr class="group"><td colspan="8">1200×2160 input</td></tr>
+        <tr class="ours"><td><b>RGVI</b> w/o Ref.</td><td></td><td>29.81</td><td><b>0.9501</b></td><td>0.0403</td><td>0.0101</td><td>17.2G</td><td>7m 56s</td></tr>
+        <tr class="ours"><td><b>RGVI</b></td><td></td><td><b>30.10</b></td><td>0.9489</td><td><b>0.0357</b></td><td><b>0.0058</b></td><td>17.2G</td><td>7m 59s</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="tnote"><sup>†</sup>Requires a fixed input resolution. Mem. is the maximum GPU memory during inference, and Time is the average inference time per sequence, on a single TITAN RTX GPU.</p>
+
+  <h3>Video restoration</h3>
+  <p class="intro">DAVI and YTVI corrupt the DAVIS 2016 and YouTube-VOS 2018 videos with random free-form masks, and the original videos serve as ground truth. Reference generation is skipped here, since restoration rarely needs it.</p>
+  <div class="tbl-wrap narrow">
+    <table>
+      <thead>
+        <tr><th></th><th colspan="2">DAVI</th><th colspan="2">YTVI</th></tr>
+        <tr><th>Method</th><th>PSNR ↑</th><th>SSIM ↑</th><th>PSNR ↑</th><th>SSIM ↑</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>STTN</td><td>26.98</td><td>0.8476</td><td>29.96</td><td>0.9102</td></tr>
+        <tr><td>FuseFormer</td><td>27.41</td><td>0.8583</td><td>29.18</td><td>0.9001</td></tr>
+        <tr><td>E<sup>2</sup>FGVI</td><td>28.71</td><td>0.8885</td><td>31.18</td><td>0.9280</td></tr>
+        <tr><td>ProPainter</td><td>29.55</td><td>0.9058</td><td><b>31.70</b></td><td>0.9312</td></tr>
+        <tr class="ours"><td><b>RGVI</b> w/o Ref.</td><td><b>29.75</b></td><td><b>0.9186</b></td><td><b>31.70</b></td><td><b>0.9335</b></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="tnote">240p input resolution.</p>
+</section>
+
+<section id="occlusion">
+  <p class="eyebrow">Analysis</p>
+  <h2>Handling occlusion with an additional mask</h2>
+  <p class="intro">Flow-based methods break down when the target is occluded by another object, because its motion corrupts the completed flows. Besides the mask of the object to remove, RGVI can take the mask of the occluding object to keep. The two are removed together, and the kept object is pasted back afterwards, which prevents color bleeding.</p>
+  <figure class="col1">
+    <a class="zoom" href="static/img/mask.jpg" target="_blank" rel="noopener"><img src="static/img/mask.jpg" alt="Input with negative and positive masks, and results without and with the additional mask" loading="lazy" width="1974" height="440"></a>
+    <figcaption>Negative masks are highlighted in green, while positive masks are highlighted in red.</figcaption>
+  </figure>
+  <div class="tbl-wrap narrow">
+    <table>
+      <thead><tr><th>Additional mask</th><th>PSNR ↑</th><th>SSIM ↑</th><th>LPIPS ↓</th><th>VFID ↓</th></tr></thead>
+      <tbody>
+        <tr><td>Without</td><td>35.13</td><td>0.9813</td><td>0.0137</td><td>0.0779</td></tr>
+        <tr class="ours"><td>With</td><td>37.31</td><td>0.9848</td><td>0.0102</td><td>0.0504</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="tnote">HQVI videos that contain occluding objects, at 240p.</p>
+</section>
+
+<section id="limitations">
+  <h2>Limitations</h2>
+  <p class="intro">Like other flow-based methods, RGVI relies on optical flows, so inaccurate flow completion can cause visible structural misalignment. The generated reference content may also look unnatural at times. Additional positive masks and stronger generative models are possible remedies.</p>
+</section>
+
+<section id="bibtex">
+  <h2>BibTeX</h2>
+  <div class="bib">
+    <button class="copy" type="button" id="copy-bib">Copy</button>
+<pre id="bib-text">@inproceedings{cho2025elevating,
+  title     = {Elevating Flow-Guided Video Inpainting with Reference Generation},
+  author    = {Cho, Suhwan and Oh, Seoung Wug and Lee, Sangyoun and Lee, Joon-Young},
+  booktitle = {Proceedings of the AAAI Conference on Artificial Intelligence},
+  volume    = {39},
+  number    = {3},
+  pages     = {2527--2535},
+  year      = {2025},
+  doi       = {10.1609/aaai.v39i3.32255}
+}</pre>
+  </div>
+</section>
+
+<footer>More video inpainting papers: <a href="https://github.com/suhwan-cho/awesome-video-inpainting" target="_blank" rel="noopener">awesome-video-inpainting</a></footer>
+</div>
+
+<script>
+(function () {
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  /* synced comparison rows: play together while visible, re-align when the first clip loops */
+  function vids(g) { return Array.prototype.slice.call(g.querySelectorAll('video')); }
+  var groups = Array.prototype.slice.call(document.querySelectorAll('[data-sync]'));
+  function start(g) {
+    var vs = vids(g);
+    vs.forEach(function (v) { if (v.preload === 'none') { v.preload = 'auto'; v.load(); } });
+    vs.forEach(function (v) { v.currentTime = 0; var p = v.play(); if (p && p.catch) p.catch(function () {}); });
+  }
+  function stop(g) { vids(g).forEach(function (v) { v.pause(); }); }
+  groups.forEach(function (g) {
+    var vs = vids(g), m = vs[0], last = 0;
+    m.addEventListener('timeupdate', function () {
+      if (m.currentTime + 0.05 < last) vs.slice(1).forEach(function (v) { v.currentTime = m.currentTime; });
+      last = m.currentTime;
+    });
+  });
+  if (!reduce && 'IntersectionObserver' in window) {
+    var io = new IntersectionObserver(function (es) { es.forEach(function (e) { e.isIntersecting ? start(e.target) : stop(e.target); }); }, { rootMargin: '200px 0px', threshold: 0.01 });
+    groups.forEach(function (g) { io.observe(g); });
+  } else {
+    groups.forEach(function (g) { vids(g).forEach(function (v) { v.controls = true; v.preload = 'metadata'; }); });
+  }
+  if (reduce) { Array.prototype.forEach.call(document.querySelectorAll('video[autoplay]'), function (v) { v.removeAttribute('autoplay'); v.pause(); }); }
+  var btn = document.getElementById('copy-bib'), pre = document.getElementById('bib-text');
+  function selectText() { var s = window.getSelection(), r = document.createRange(); r.selectNodeContents(pre); s.removeAllRanges(); s.addRange(r); }
+  btn.addEventListener('click', function () {
+    var done = function () { btn.textContent = 'Copied'; setTimeout(function () { btn.textContent = 'Copy'; }, 1600); };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(pre.textContent).then(done, function () { selectText(); btn.textContent = 'Press Ctrl+C'; });
+    } else { selectText(); btn.textContent = 'Press Ctrl+C'; }
+  });
+})();
+</script>
+</body>
+</html>
